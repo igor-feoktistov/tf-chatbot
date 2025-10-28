@@ -1,0 +1,33 @@
+const EVENT_USER_PROMPT = "01"
+const EVENT_SYSTEM_PROMPT = "02"
+const chatbox = document.getElementById('chatbox');
+const systemPrompt = document.getElementById('systemPrompt');
+const userPrompt = document.getElementById('userPrompt');
+const ws = new WebSocket("ws://" + window.location.host + "/ws");
+chatbox.innerHTML += `<h3>Assistant</h3></div>Hello! How can I help you today?`;
+ws.onmessage = function(event) {
+    chatbox.innerHTML += `${event.data}`;
+};
+chatbox.scrollTop = chatbox.scrollHeight;
+userPrompt.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        sendUserPrompt();
+    }
+});
+function sendSystemPrompt() {
+    const message = systemPrompt.value;
+    if (message.trim().length > 0) {
+        ws.send(EVENT_SYSTEM_PROMPT + ":" + message);
+        document.getElementById('systemPromptDetails').open = false;
+    }
+}
+function sendUserPrompt() {
+    const message = userPrompt.value;
+    if (message.trim().length > 0) {
+        chatbox.innerHTML += `<div><h3>User</h3>${message}<h3>Assistant</h3></div>`;
+        ws.send(EVENT_USER_PROMPT + ":" + message);
+        userPrompt.value = '';
+        chatbox.scrollTop = chatbox.scrollHeight;
+    }
+}
