@@ -38,7 +38,7 @@ func handleIndex(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve ChatBot from context"})
 		return
 	}
-	accessToken, err := c.Cookie("accessToken")
+	accessToken, err := c.Cookie("BearerToken")
 	if err == nil {
 		chatBot.config.ApiKey = accessToken
 	} else {
