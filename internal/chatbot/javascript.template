@@ -3,11 +3,8 @@ const EVENT_SYSTEM_PROMPT = "02"
 const chatbox = document.getElementById('chatbox');
 const systemPrompt = document.getElementById('systemPrompt');
 const userPrompt = document.getElementById('userPrompt');
-const ws = new WebSocket("wss://" + window.location.host + "/ws");
+var ws = null;
 chatbox.innerHTML += `<h3>Assistant</h3></div>Hello! How can I help you today?`;
-ws.onmessage = function(event) {
-    chatbox.innerHTML += `${event.data}`;
-};
 chatbox.scrollTop = chatbox.scrollHeight;
 userPrompt.addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
@@ -15,6 +12,22 @@ userPrompt.addEventListener('keydown', function(event) {
         sendUserPrompt();
     }
 });
+function startWebsocket() {
+    ws = new WebSocket("wss://" + window.location.host + "/ws");
+    ws.onopen = function(){
+        console.log('Websocket is connected!');
+    };
+    ws.onmessage = function(event) {
+        chatbox.innerHTML += `${event.data}`;
+    };
+    ws.onclose = function(){
+      console.log('Websocket is closed!');
+      checkWebsocket();
+    };
+}
+function checkWebsocket(){
+    if (!ws || ws.readyState == 3) startWebsocket();
+}
 function sendSystemPrompt() {
     const message = systemPrompt.value;
     if (message.trim().length > 0) {
@@ -34,3 +47,5 @@ function sendUserPrompt() {
         chatbox.scrollTop = chatbox.scrollHeight;
     }
 }
+startWebsocket();
+setInterval(checkWebsocket, 5000);
