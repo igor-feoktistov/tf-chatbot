@@ -2,6 +2,7 @@ package chatbot
 
 import (
 	"fmt"
+	"time"
 	"log"
 	"net/http"
 	"regexp"
@@ -58,6 +59,22 @@ func handleJavascript(c *gin.Context) {
 	c.HTML(http.StatusOK, "javascript.js", gin.H{})
 }
 
+func keepalive(conn *websocket.Conn) {
+	ticker := time.NewTicker(15 * time.Second)
+	defer func() {
+		ticker.Stop()
+	}()
+	for {
+		select {
+		case <-ticker.C:
+			if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				log.Printf("Error sending ping: %s", err.Error())
+                    		return
+			}
+		}
+	}
+}
+
 func handleWebSocket(c *gin.Context) {
 	var chatBot *ChatBot
 	if val, exists := c.Get("chatBot"); exists {
@@ -68,6 +85,7 @@ func handleWebSocket(c *gin.Context) {
 		return
 	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	go keepalive(conn)
 	if err != nil {
 		log.Printf("ERROR: failed to upgrade connection to websocket: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upgrade connection to websocket: " + err.Error()})
@@ -78,7 +96,6 @@ func handleWebSocket(c *gin.Context) {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("ERROR: failed to read websocket message: %s", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read websocket message: " + err.Error()})
 			return
 		}
 		switch messageType {
@@ -118,6 +135,8 @@ func handleWebSocket(c *gin.Context) {
 			log.Printf("INFO: received PING message type", err)
 		case 10:
 			log.Printf("INFO: received PONG message type", err)
+		default:
+			log.Printf("INFO: received unrecognized message type %d", messageType)
 		}
 	}
 }

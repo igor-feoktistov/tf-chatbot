@@ -2,13 +2,13 @@ PROJECT := tf-chatbot
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 OSFLAG=$(shell go env GOHOSTOS)
 
-VERSION ?= 1.0.0
+VERSION ?= 1.0.2
 
 default: build
 
 build:
 	# Build linux-amd64 binaries
-	GOOS=linux GOARCH=amd64 go build -o tf-chatbot ./cmd/...
+	#GOOS=linux GOARCH=amd64 go build -o tf-chatbot ./cmd/...
 	# Build darwin-amd64 binaries
 	GOOS=darwin GOARCH=amd64 go build -o tf-chatbot ./cmd/...
 
