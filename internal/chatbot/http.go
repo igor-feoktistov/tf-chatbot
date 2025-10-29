@@ -60,7 +60,7 @@ func handleJavascript(c *gin.Context) {
 }
 
 func keepalive(conn *websocket.Conn) {
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
 		ticker.Stop()
 	}()

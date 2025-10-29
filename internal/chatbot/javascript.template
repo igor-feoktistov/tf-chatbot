@@ -23,6 +23,9 @@ function sendSystemPrompt() {
     }
 }
 function sendUserPrompt() {
+    if (ws.readyState === WebSocket.CLOSED) {
+        ws = new WebSocket("wss://" + window.location.host + "/ws");
+    }
     const message = userPrompt.value;
     if (message.trim().length > 0) {
         chatbox.innerHTML += `<div><h3>User</h3>${message}<h3>Assistant</h3></div>`;
