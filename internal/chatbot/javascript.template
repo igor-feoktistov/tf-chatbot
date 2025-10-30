@@ -22,7 +22,7 @@ userPrompt.addEventListener('keydown', function(event) {
 });
 
 function startWebsocket() {
-    ws = new WebSocket("ws://" + window.location.host + "/ws");
+    ws = new WebSocket("wss://" + window.location.host + "/ws");
     ws.addEventListener('open', (event) => {
         userPrompt.disabled = false;
         connect.style.visibility = "hidden";
@@ -34,7 +34,6 @@ function startWebsocket() {
     ws.addEventListener('close', (event) => {
         userPrompt.disabled = true;
         connect.style.visibility = "visible";
-        console.log('Websocket is closed!');
         checkWebsocket();
     });
 }
@@ -99,4 +98,4 @@ function deleteSpinner() {
 }
 
 startWebsocket();
-setInterval(checkWebsocket, 30000);
+setInterval(checkWebsocket, 5000);
