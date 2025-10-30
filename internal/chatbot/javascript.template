@@ -5,6 +5,7 @@ EVENT_ASSISTANT_OUTPUT    = "04"
 EVENT_ASSISTANT_FINISH    = "05"
 EVENT_PING                = "06"
 EVENT_PONG                = "07"
+EVENT_DIAGNOSTIC          = "08"
 const chatbox = document.getElementById('chatbox');
 const systemPrompt = document.getElementById('systemPromptText');
 const userPrompt = document.getElementById('userPromptText');
@@ -71,6 +72,7 @@ function readMessage(event) {
             chatbox.scrollTop = chatbox.scrollHeight;
             break;
         case EVENT_ASSISTANT_OUTPUT:
+        case EVENT_DIAGNOSTIC:
             deleteSpinner();
             chatbox.innerHTML += event.data.substring(3);
             chatbox.scrollTop = chatbox.scrollHeight;

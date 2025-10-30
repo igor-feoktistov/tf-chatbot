@@ -21,6 +21,7 @@ const (
 	EventAssistantFinish = "05"
 	EventPing            = "06"
 	EventPong            = "07"
+	EventDiagnostic      = "08"
 )
 
 //go:embed index.template
@@ -90,11 +91,21 @@ func handleWebSocket(c *gin.Context) {
 		return
 	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	go keepalive(conn)
 	if err != nil {
 		log.Printf("ERROR: failed to upgrade connection to websocket: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upgrade connection to websocket: " + err.Error()})
 		return
+	}
+	go keepalive(conn)
+	bearerToken, err := c.Cookie("BearerToken")
+	if err == nil {
+		chatBot.config.ApiKey = bearerToken
+	} else {
+		log.Printf("WARNING: BearerToken is not found in cookies content")
+		if len(chatBot.config.ApiKey) == 0 {
+			log.Printf("ERROR: ApiKey is not defined")
+			conn.WriteMessage(websocket.TextMessage, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>BearerToken is not found in cookies content</p>`))
+		}
 	}
 	defer conn.Close()
 	for {
@@ -108,15 +119,15 @@ func handleWebSocket(c *gin.Context) {
 			return
 		}
 		switch messageType {
-		case 8:
+		case websocket.CloseMessage:
 			log.Printf("INFO: peer initiated connection close, closing websocket")
 			break
-		case 1, 2:
+		case websocket.TextMessage, websocket.BinaryMessage:
 			re := regexp.MustCompile(`^(\d+):`)
 			subMatch := re.FindStringSubmatch(string(message))
 			if len(subMatch) != 2 {
 				log.Printf("ERROR: received unrecognized websocket message: %s", string(message))
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Received unrecognized websocket message: " + string(message)})
+				conn.WriteMessage(messageType, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>` + fmt.Sprintf("received unrecognized websocket message: \"%s\"", string(message)) + `</p>`))
 				return
 			}
 			session := sessions.Default(c)
@@ -156,11 +167,11 @@ func handleWebSocket(c *gin.Context) {
 				session.Save()
 			default:
 				log.Printf("ERROR: received unrecognized websocket event: %s", string(message))
-				conn.WriteMessage(messageType, []byte(fmt.Sprintf("ERROR: received unrecognized websocket event: \"%s\"", string(message))))
+				conn.WriteMessage(messageType, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>` + fmt.Sprintf("received unrecognized websocket event: \"%s\"", string(message)) + `</p>`))
 			}
-		case 9:
+		case websocket.PingMessage:
 			log.Printf("INFO: received system PING message", err)
-		case 10:
+		case websocket.PongMessage:
 			log.Printf("INFO: received system PONG message", err)
 		default:
 			log.Printf("INFO: received unrecognized message type %d", messageType)
