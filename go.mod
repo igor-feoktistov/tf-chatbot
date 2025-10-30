@@ -1,6 +1,6 @@
 module tf-chatbot
 
-go 1.25.1
+go 1.25.2
 
 require (
 	github.com/gin-contrib/multitemplate v1.1.1

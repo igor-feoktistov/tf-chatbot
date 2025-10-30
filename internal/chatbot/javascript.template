@@ -68,10 +68,12 @@ function readMessage(event) {
     switch (eventType) {
         case EVENT_ASSISTANT_WAIT:
             addSpinner();
+            chatbox.scrollTop = chatbox.scrollHeight;
             break;
         case EVENT_ASSISTANT_OUTPUT:
             deleteSpinner();
             chatbox.innerHTML += event.data.substring(3);
+            chatbox.scrollTop = chatbox.scrollHeight;
             break;
         case EVENT_ASSISTANT_FINISH:
             deleteSpinner();

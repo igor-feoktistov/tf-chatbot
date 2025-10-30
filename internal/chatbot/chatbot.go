@@ -172,7 +172,7 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 			if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
 				completeResponse = append(completeResponse, chunk.Choices[0].Delta.Content)
 				if strings.HasPrefix(chunk.Choices[0].Delta.Content, "{") ||
-					strings.HasPrefix(chunk.Choices[0].Delta.Content, "undefined: {") ||
+					strings.HasPrefix(chunk.Choices[0].Delta.Content, "undefined {") ||
 					strings.Contains(chunk.Choices[0].Delta.Content, `map[command:`) {
 					if len(assistantResponse) > 0 {
 						responseChan <- string(utils.MDtoHTML([]byte(strings.Join(assistantResponse, ""))))
