@@ -1,33 +1,48 @@
-const EVENT_USER_PROMPT = "01"
+const EVENT_USER_PROMPT   = "01"
 const EVENT_SYSTEM_PROMPT = "02"
+EVENT_ASSISTANT_WAIT      = "03"
+EVENT_ASSISTANT_OUTPUT    = "04"
+EVENT_ASSISTANT_FINISH    = "05"
+EVENT_PING                = "06"
+EVENT_PONG                = "07"
 const chatbox = document.getElementById('chatbox');
-const systemPrompt = document.getElementById('systemPrompt');
-const userPrompt = document.getElementById('userPrompt');
+const systemPrompt = document.getElementById('systemPromptText');
+const userPrompt = document.getElementById('userPromptText');
+const connect = document.getElementById("connect");
 var ws = null;
+
 chatbox.innerHTML += `<h3>Assistant</h3></div>Hello! How can I help you today?`;
 chatbox.scrollTop = chatbox.scrollHeight;
+
 userPrompt.addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
         event.preventDefault();
         sendUserPrompt();
     }
 });
+
 function startWebsocket() {
-    ws = new WebSocket("wss://" + window.location.host + "/ws");
-    ws.onopen = function(){
+    ws = new WebSocket("ws://" + window.location.host + "/ws");
+    ws.addEventListener('open', (event) => {
+        userPrompt.disabled = false;
+        connect.style.visibility = "hidden";
         console.log('Websocket is connected!');
-    };
-    ws.onmessage = function(event) {
-        chatbox.innerHTML += `${event.data}`;
-    };
-    ws.onclose = function(){
-      console.log('Websocket is closed!');
-      checkWebsocket();
-    };
+    });
+    ws.addEventListener('message', (event) => {
+        ws.onmessage = readMessage(event);
+    });
+    ws.addEventListener('close', (event) => {
+        userPrompt.disabled = true;
+        connect.style.visibility = "visible";
+        console.log('Websocket is closed!');
+        checkWebsocket();
+    });
 }
+
 function checkWebsocket(){
     if (!ws || ws.readyState == 3) startWebsocket();
 }
+
 function sendSystemPrompt() {
     const message = systemPrompt.value;
     if (message.trim().length > 0) {
@@ -35,9 +50,10 @@ function sendSystemPrompt() {
         document.getElementById('systemPromptDetails').open = false;
     }
 }
+
 function sendUserPrompt() {
     if (ws.readyState === WebSocket.CLOSED) {
-        ws = new WebSocket("wss://" + window.location.host + "/ws");
+        startWebsocket();
     }
     const message = userPrompt.value;
     if (message.trim().length > 0) {
@@ -47,5 +63,40 @@ function sendUserPrompt() {
         chatbox.scrollTop = chatbox.scrollHeight;
     }
 }
+
+function readMessage(event) {
+    const eventType = event.data.substring(0, 2);
+    switch (eventType) {
+        case EVENT_ASSISTANT_WAIT:
+            addSpinner();
+            break;
+        case EVENT_ASSISTANT_OUTPUT:
+            deleteSpinner();
+            chatbox.innerHTML += event.data.substring(3);
+            break;
+        case EVENT_ASSISTANT_FINISH:
+            deleteSpinner();
+            break;
+        case EVENT_PING:
+            ws.send(EVENT_PONG + ":" + 'pong');
+            break;
+        case EVENT_PONG:
+            break;
+        default:
+            console.log('Unexpected event type ' + eventType);
+    }
+}
+
+function addSpinner() {
+    chatbox.innerHTML += `<div id="spinner"><img src="/static/icons/gear.gif">&nbsp;Awaiting response...</div>`;
+}
+
+function deleteSpinner() {
+    const spinner = document.getElementById('spinner');
+    if (spinner) {
+        chatbox.removeChild(spinner);
+    }
+}
+
 startWebsocket();
-setInterval(checkWebsocket, 5000);
+setInterval(checkWebsocket, 30000);

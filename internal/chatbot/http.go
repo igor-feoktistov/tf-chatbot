@@ -14,8 +14,13 @@ import (
 )
 
 const (
-	EventUserPrompt   = "01"
-	EventSystemPrompt = "02"
+	EventUserPrompt      = "01"
+	EventSystemPrompt    = "02"
+	EventAssistantWait   = "03"
+	EventAssistantOutput = "04"
+	EventAssistantFinish = "05"
+	EventPing            = "06"
+	EventPong            = "07"
 )
 
 //go:embed index.template
@@ -39,14 +44,14 @@ func handleIndex(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve ChatBot from context"})
 		return
 	}
-	accessToken, err := c.Cookie("BearerToken")
+	bearerToken, err := c.Cookie("BearerToken")
 	if err == nil {
-		chatBot.config.ApiKey = accessToken
+		chatBot.config.ApiKey = bearerToken
 	} else {
-		log.Printf("WARNING: accessToken not found in cookies content")
+		log.Printf("WARNING: BearerToken is not found in cookies content")
 		if len(chatBot.config.ApiKey) == 0 {
-			log.Printf("Failed to retrieve ChatBot from context")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "accessToken not found in cookies content"})
+			log.Printf("ERROR: ApiKey is not defined")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "BearerToken is not found in cookies content"})
 			return
 		}
 	}
@@ -60,16 +65,16 @@ func handleJavascript(c *gin.Context) {
 }
 
 func keepalive(conn *websocket.Conn) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer func() {
 		ticker.Stop()
 	}()
 	for {
 		select {
 		case <-ticker.C:
-			if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				log.Printf("Error sending ping: %s", err.Error())
-                    		return
+			if err := conn.WriteMessage(websocket.TextMessage, []byte(EventPing + ":ping")); err != nil {
+				log.Printf("ERROR: failed to send PING message: %s", err)
+				return
 			}
 		}
 	}
@@ -95,12 +100,16 @@ func handleWebSocket(c *gin.Context) {
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("ERROR: failed to read websocket message: %s", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+				log.Printf("ERROR: failure while reading websocket message: %s", err.Error())
+			} else {
+				log.Printf("INFO: websocket connection closed")
+			}
 			return
 		}
 		switch messageType {
 		case 8:
-			log.Printf("INFO: Peer initiated connection close, closing websocket")
+			log.Printf("INFO: peer initiated connection close, closing websocket")
 			break
 		case 1, 2:
 			re := regexp.MustCompile(`^(\d+):`)
@@ -112,15 +121,33 @@ func handleWebSocket(c *gin.Context) {
 			}
 			session := sessions.Default(c)
 			switch subMatch[1] {
+			case EventPing:
+				if err := conn.WriteMessage(messageType, []byte(EventPong + ":pong")); err != nil {
+					log.Printf("ERROR: failed to send PONG message: %s", err)
+					return
+				}
+			case EventPong:
+				log.Printf("INFO: received PONG reply")
 			case EventUserPrompt:
 				// Process user prompt
 				go func() {
+					var err error
 					responseChan := chatBot.startCompletionStream(session, string(message[3:]))
-					for chunk := range responseChan {
-						if err := conn.WriteMessage(messageType, []byte(chunk)); err != nil {
-							log.Printf("ERROR: failed to write websocket message: %s", err)
-							return
+					if err = conn.WriteMessage(messageType, []byte(EventAssistantWait)); err == nil {
+						for chunk := range responseChan {
+							if err = conn.WriteMessage(messageType, []byte(EventAssistantOutput + ":" + chunk)); err != nil {
+								break
+							}
+							if err = conn.WriteMessage(messageType, []byte(EventAssistantWait)); err != nil {
+								break
+							}
 						}
+					}
+					if err == nil {
+						err = conn.WriteMessage(messageType, []byte(EventAssistantFinish))
+					}
+					if err != nil {
+						log.Printf("ERROR: failed to write websocket message: %s", err)
 					}
 				}()
 			case EventSystemPrompt:
@@ -132,9 +159,9 @@ func handleWebSocket(c *gin.Context) {
 				conn.WriteMessage(messageType, []byte(fmt.Sprintf("ERROR: received unrecognized websocket event: \"%s\"", string(message))))
 			}
 		case 9:
-			log.Printf("INFO: received PING message type", err)
+			log.Printf("INFO: received system PING message", err)
 		case 10:
-			log.Printf("INFO: received PONG message type", err)
+			log.Printf("INFO: received system PONG message", err)
 		default:
 			log.Printf("INFO: received unrecognized message type %d", messageType)
 		}

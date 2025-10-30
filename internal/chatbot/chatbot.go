@@ -2,6 +2,7 @@ package chatbot
 
 import (
 	"fmt"
+	"time"
 	"log"
 	"context"
 	"io/ioutil"
@@ -18,6 +19,10 @@ import (
         "github.com/openai/openai-go/v3/option"
 
 	"tf-chatbot/internal/utils"
+)
+
+const (
+	LLM_STREAM_TIMEOUT = 300
 )
 
 type mcpServer struct {
@@ -53,9 +58,10 @@ type ToolContent struct {
 
 type ChatBot struct {
         config     *chatBotConfig
+        staticPath string
 }
 
-func ChatBotInitialize(configPath string) (chatBot *ChatBot, err error) {
+func ChatBotInitialize(configPath string, staticPath string) (chatBot *ChatBot, err error) {
 	var b []byte
 	if b, err = ioutil.ReadFile(configPath); err != nil {
 		err = fmt.Errorf("Failed to read TrueFoundry configuration: ReadFile() failure: %s", err)
@@ -75,6 +81,7 @@ func ChatBotInitialize(configPath string) (chatBot *ChatBot, err error) {
 	}
 	chatBot = &ChatBot{
 		config: config,
+		staticPath: staticPath,
 	}
 	return 
 }
@@ -92,6 +99,7 @@ func (chatBot *ChatBot) Run() {
 	renderer.AddFromString("index.html", indexHTML)
 	renderer.AddFromString("javascript.js", javascriptJS)
 	router.HTMLRender = renderer
+	router.Static("/static", chatBot.staticPath)
 	router.GET("/", handleIndex)
 	router.GET("javascript.js", handleJavascript)
 	router.GET("/ws", handleWebSocket)
@@ -142,7 +150,8 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 	openaiParams.Messages = messages
 	go func() {
 		defer close(responseChan)
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), LLM_STREAM_TIMEOUT * time.Second)
+		defer cancel()
 		stream := openaiClient.Chat.Completions.NewStreaming(ctx, openaiParams)
 		defer stream.Close()
 		acc := openai.ChatCompletionAccumulator{}
@@ -162,7 +171,7 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 			}
 			if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
 				completeResponse = append(completeResponse, chunk.Choices[0].Delta.Content)
-				if strings.HasPrefix(chunk.Choices[0].Delta.Content, "{") {
+				if strings.HasPrefix(chunk.Choices[0].Delta.Content, "{") || strings.Contains(chunk.Choices[0].Delta.Content, `map[command:`) {
 					if len(assistantResponse) > 0 {
 						responseChan <- string(utils.MDtoHTML([]byte(strings.Join(assistantResponse, ""))))
 						assistantResponse = []string{}
@@ -196,7 +205,8 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 				session.Save()
 			}
 		} else {
-			log.Printf("ERROR: stream processing error: %s", err)
+			log.Printf("ERROR: LLM stream response error: %s", err)
+			responseChan <- `<p style="color: red;"><strong>LLM stream response error: </strong>` + err.Error() + `</p>`
 		}
 	}()
 	return responseChan
