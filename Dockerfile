@@ -1,10 +1,10 @@
-FROM golang:1.25.1-alpine
+FROM golang:1.25.2-alpine
 
 COPY . /usr/local/go/src/tf-chatbot
 
 WORKDIR /usr/local/go/src/tf-chatbot
 
-ENV GOLANG_VERSION=1.25.1
+ENV GOLANG_VERSION=1.25.2
 
 RUN go get -d -v ./...
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /usr/local/go/bin/tf-chatbot ./cmd/...
