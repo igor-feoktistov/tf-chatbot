@@ -2,7 +2,7 @@ PROJECT := tf-chatbot
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 OSFLAG=$(shell go env GOHOSTOS)
 
-VERSION ?= 1.0.9
+VERSION ?= 1.0.10
 
 default: build
 

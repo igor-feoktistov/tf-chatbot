@@ -30,6 +30,9 @@ var indexHTML string
 //go:embed javascript.template
 var javascriptJS string
 
+//go:embed styles.template
+var stylesCSS string
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -63,6 +66,11 @@ func handleIndex(c *gin.Context) {
 
 func handleJavascript(c *gin.Context) {
 	c.HTML(http.StatusOK, "javascript.js", gin.H{})
+}
+
+func handleStyles(c *gin.Context) {
+	c.Header("Content-Type", "text/css")
+	c.HTML(http.StatusOK, "styles.css", gin.H{})
 }
 
 func keepalive(conn *websocket.Conn) {
@@ -165,6 +173,9 @@ func handleWebSocket(c *gin.Context) {
 				// Save system prompt
 				session.Set("systemPrompt", string(message[3:]))
 				session.Save()
+				if err = conn.WriteMessage(messageType, []byte(EventAssistantOutput + ":<p>Applied submitted by user system prompt.</p>")); err != nil {
+					log.Printf("ERROR: failed to write websocket message: %s", err)
+				}
 			default:
 				log.Printf("ERROR: received unrecognized websocket event: %s", string(message))
 				conn.WriteMessage(messageType, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>` + fmt.Sprintf("received unrecognized websocket event: \"%s\"", string(message)) + `</p>`))

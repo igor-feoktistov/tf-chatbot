@@ -98,10 +98,12 @@ func (chatBot *ChatBot) Run() {
 	})
 	renderer.AddFromString("index.html", indexHTML)
 	renderer.AddFromString("javascript.js", javascriptJS)
+	renderer.AddFromString("styles.css", stylesCSS)
 	router.HTMLRender = renderer
 	router.Static("/static", chatBot.staticPath)
 	router.GET("/", handleIndex)
 	router.GET("javascript.js", handleJavascript)
+	router.GET("styles.css", handleStyles)
 	router.GET("/ws", handleWebSocket)
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to run server: %v", err)

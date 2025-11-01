@@ -6,10 +6,12 @@ EVENT_ASSISTANT_FINISH    = "05"
 EVENT_PING                = "06"
 EVENT_PONG                = "07"
 EVENT_DIAGNOSTIC          = "08"
+
 const chatbox = document.getElementById('chatbox');
 const systemPrompt = document.getElementById('systemPromptText');
 const userPrompt = document.getElementById('userPromptText');
 const connect = document.getElementById("connect");
+
 var ws = null;
 
 chatbox.innerHTML += `<h3>Assistant</h3></div>Hello! How can I help you today?`;
@@ -23,7 +25,7 @@ userPrompt.addEventListener('keydown', function(event) {
 });
 
 function startWebsocket() {
-    ws = new WebSocket("wss://" + window.location.host + "/ws");
+    ws = new WebSocket("ws://" + window.location.host + "/ws");
     ws.addEventListener('open', (event) => {
         userPrompt.disabled = false;
         connect.style.visibility = "hidden";
@@ -101,5 +103,69 @@ function deleteSpinner() {
     }
 }
 
+function enableControlElement(controlElement) {
+    const element = document.getElementById(controlElement);
+    if (element) {
+        element.style.display = 'flex';
+    }
+}
+
+function disableControlElement(controlElement) {
+    const element = document.getElementById(controlElement);
+    if (element) {
+        element.style.display = 'none';
+    }
+}
+
+function disableHistory() {
+    disableControlElement('disableHistory');
+    setTimeout(() => {
+        enableControlElement('enableHistory');
+    }, 100);
+}
+
+function enableHistory() {
+    disableControlElement('enableHistory');
+    setTimeout(() => {
+        enableControlElement('disableHistory');
+    }, 100);
+}
+
+function showTooltip(element, text, event) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'dynamic-tooltip';
+    tooltip.textContent = text;
+    tooltip.id = 'active-tooltip';
+    document.body.appendChild(tooltip);
+    const rect = element.getBoundingClientRect();
+    tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
+    tooltip.style.top = (rect.top + tooltip.offsetHeight) + 'px';
+    setTimeout(() => {
+        tooltip.classList.add('visible');
+    }, 1);
+}
+
+function hideTooltip() {
+    const tooltip = document.getElementById('active-tooltip');
+    if (tooltip) {
+        tooltip.classList.remove('visible');
+        setTimeout(() => {
+            tooltip.remove();
+        }, 10);
+    }
+}
+
 startWebsocket();
 setInterval(checkWebsocket, 5000);
+
+document.querySelectorAll('[data-tooltip]').forEach(element => {
+    element.addEventListener('mouseenter', function(event) {
+        const tooltipText = this.getAttribute('data-tooltip');
+        showTooltip(this, tooltipText, event);
+    });
+    element.addEventListener('mouseleave', function() {
+        hideTooltip();
+    });
+});
+
+enableControlElement('disableHistory');
