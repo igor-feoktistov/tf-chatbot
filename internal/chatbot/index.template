@@ -7,24 +7,29 @@
   <title>{{.Header}}</title>
 </head>
 <body>
-  <h1>{{.Header}}</h1>
-  <details class="chat" id="systemPromptDetails"><summary class="chat" id="systemPromptSummary">System Prompt</summary>
-    <div>
-      <textarea class="chat" id="systemPromptText" rows="12" cols="128" placeholder="Enter system prompt..."></textarea><br>
-      <button class="chat" id="sendSystemPromptButton" onclick="sendSystemPrompt()">Apply</button>
+  <div class="header">
+    <div><img id="robot" src="/static/icons/robot.png" class="controlImage"></div>
+    <div><h2>{{.Header}}</h2></div>
+  </div>
+  <div class="top-panel" id="topPanel">
+    <div id="controlPanel">
+      <div id="resetHistory" data-tooltip="Reset request history"><img src="/static/icons/reset.png" type="button" onClick="resetHistory()" class="controlImage"></div>
+      <div  id="disableHistory" data-tooltip="Disable request history"><img src="/static/icons/toggle_on.png" type="button" onClick="disableHistory()" class="controlImage"></div>
+      <div class="controlImage" id="enableHistory" data-tooltip="Enable request history"><img src="/static/icons/toggle_off.png" type="button" onClick="enableHistory()" class="controlImage"></div>
     </div>
-  </details><br>
+    <details class="chat" id="systemPromptDetails"><summary class="chat" id="systemPromptSummary">System Prompt</summary>
+      <div>
+        <textarea class="chat" id="systemPromptText" rows="12" cols="128" placeholder="Enter system prompt..."></textarea><br>
+        <img src="/static/icons/enter_gray.png" type="button" onClick="sendSystemPrompt()" class="controlImage">
+      </div>
+    </details>
+  </div><br>
   <div class="chat" id="chatbox"></div><br>
   <div id="userPrompt">
     <input class="chat" type="text" id="userPromptText" placeholder="Enter your message...">
-    <button class="chat" id="sendUserPromptButton" onclick="sendUserPrompt()">▶ ⏎</button>
+    <img src="/static/icons/enter_white.png" type="button" onClick="sendUserPrompt()" class="controlImage">
     <div id="connect"><img src="/static/icons/connect.gif">&nbsp;Connecting...</div>
   </div>
-  <div id="controlPanel">
-    <div id="resetHistory" data-tooltip="Reset request history"><img src="/static/icons/reset.png" type="button" class="controlImage"></div>
-    <div  id="disableHistory" data-tooltip="Disable request history"><img src="/static/icons/disable.png" type="button" onClick="disableHistory()" class="controlImage"></div>
-    <div class="controlImage" id="enableHistory" data-tooltip="Enable request history"><img src="/static/icons/enable.png" type="button" onClick="enableHistory()" class="controlImage"></div>
-  <div>
   <script src="/javascript.js"></script>
 </body>
 </html>

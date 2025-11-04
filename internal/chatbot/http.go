@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
 	"github.com/gorilla/websocket"
+	"github.com/openai/openai-go/v3"
 )
 
 const (
@@ -22,6 +23,10 @@ const (
 	EventPing            = "06"
 	EventPong            = "07"
 	EventDiagnostic      = "08"
+	EventConfirmed       = "09"
+	EventResetHistory    = "10"
+	EventEnableHistory   = "11"
+	EventDisableHistory  = "12"
 )
 
 //go:embed index.template
@@ -60,7 +65,7 @@ func handleIndex(c *gin.Context) {
 		}
 	}
 	c.HTML(http.StatusOK, "index.html", gin.H{
-		"Header": "AI ChatBot",
+		"Header": "ChatBot",
 	})
 }
 
@@ -116,6 +121,7 @@ func handleWebSocket(c *gin.Context) {
 		}
 	}
 	defer conn.Close()
+	resetHistory := true
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
@@ -131,6 +137,7 @@ func handleWebSocket(c *gin.Context) {
 			log.Printf("INFO: peer initiated connection close, closing websocket")
 			break
 		case websocket.TextMessage, websocket.BinaryMessage:
+			var err error
 			re := regexp.MustCompile(`^(\d+):`)
 			subMatch := re.FindStringSubmatch(string(message))
 			if len(subMatch) != 2 {
@@ -150,35 +157,55 @@ func handleWebSocket(c *gin.Context) {
 			case EventUserPrompt:
 				// Process user prompt
 				go func() {
-					var err error
-					responseChan := chatBot.startCompletionStream(session, string(message[3:]))
-					if err = conn.WriteMessage(messageType, []byte(EventAssistantWait)); err == nil {
-						for chunk := range responseChan {
-							if err = conn.WriteMessage(messageType, []byte(EventAssistantOutput + ":" + chunk)); err != nil {
-								break
-							}
-							if err = conn.WriteMessage(messageType, []byte(EventAssistantWait)); err != nil {
-								break
-							}
+					responseChan := chatBot.startCompletionStream(session, string(message[3:]), resetHistory)
+					for chunk := range responseChan {
+						if err = conn.WriteMessage(messageType, []byte(EventAssistantOutput + ":" + chunk)); err != nil {
+							break
+						}
+						if err = conn.WriteMessage(messageType, []byte(EventAssistantWait)); err != nil {
+							break
 						}
 					}
 					if err == nil {
 						err = conn.WriteMessage(messageType, []byte(EventAssistantFinish))
 					}
-					if err != nil {
-						log.Printf("ERROR: failed to write websocket message: %s", err)
-					}
+					resetHistory = false
 				}()
+				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventUserPrompt))
 			case EventSystemPrompt:
 				// Save system prompt
 				session.Set("systemPrompt", string(message[3:]))
+				messages := []openai.ChatCompletionMessageParamUnion{}
+				session.Set("messages", messages)
 				session.Save()
-				if err = conn.WriteMessage(messageType, []byte(EventAssistantOutput + ":<p>Applied submitted by user system prompt.</p>")); err != nil {
-					log.Printf("ERROR: failed to write websocket message: %s", err)
+				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventSystemPrompt))
+			case EventResetHistory:
+				// Reset history
+				if !resetHistory {
+					log.Printf("INFO: received EventResetHistory")
+					if err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventResetHistory)); err == nil {
+						messages := []openai.ChatCompletionMessageParamUnion{}
+						session.Set("messages", messages)
+						session.Save()
+						resetHistory = true
+					}
 				}
+			case EventDisableHistory:
+				// Disable history
+				log.Printf("INFO: received EventDisableHistory")
+				chatBot.config.ChatOptions.ChatHistory = false
+				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventDisableHistory))
+			case EventEnableHistory:
+				// Enable history
+				log.Printf("INFO: received EventEnableHistory")
+				chatBot.config.ChatOptions.ChatHistory = true
+				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventEnableHistory))
 			default:
 				log.Printf("ERROR: received unrecognized websocket event: %s", string(message))
 				conn.WriteMessage(messageType, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>` + fmt.Sprintf("received unrecognized websocket event: \"%s\"", string(message)) + `</p>`))
+			}
+			if err != nil {
+				log.Printf("ERROR: websocket error: %s", err)
 			}
 		case websocket.PingMessage:
 			log.Printf("INFO: received system PING message", err)

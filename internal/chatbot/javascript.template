@@ -1,12 +1,17 @@
-const EVENT_USER_PROMPT   = "01"
-const EVENT_SYSTEM_PROMPT = "02"
-EVENT_ASSISTANT_WAIT      = "03"
-EVENT_ASSISTANT_OUTPUT    = "04"
-EVENT_ASSISTANT_FINISH    = "05"
-EVENT_PING                = "06"
-EVENT_PONG                = "07"
-EVENT_DIAGNOSTIC          = "08"
+const EVENT_USER_PROMPT      = "01"
+const EVENT_SYSTEM_PROMPT    = "02"
+const EVENT_ASSISTANT_WAIT   = "03"
+const EVENT_ASSISTANT_OUTPUT = "04"
+const EVENT_ASSISTANT_FINISH = "05"
+const EVENT_PING             = "06"
+const EVENT_PONG             = "07"
+const EVENT_DIAGNOSTIC       = "08"
+const EVENT_CONFIRMED        = "09"
+const EVENT_RESET_HISTORY    = "10"
+const EVENT_ENABLE_HISTORY   = "11"
+const EVENT_DISABLE_HISTORY  = "12"
 
+const robot = document.getElementById("robot");
 const chatbox = document.getElementById('chatbox');
 const systemPrompt = document.getElementById('systemPromptText');
 const userPrompt = document.getElementById('userPromptText');
@@ -63,6 +68,7 @@ function sendUserPrompt() {
         ws.send(EVENT_USER_PROMPT + ":" + message);
         userPrompt.value = '';
         chatbox.scrollTop = chatbox.scrollHeight;
+        robot.src="/static/icons/robot_animated.gif";
     }
 }
 
@@ -81,6 +87,37 @@ function readMessage(event) {
             break;
         case EVENT_ASSISTANT_FINISH:
             deleteSpinner();
+            robot.src="/static/icons/robot.png";
+            break;
+        case EVENT_CONFIRMED:
+            const confirmedEventType = event.data.substring(3, 5);
+            switch (confirmedEventType) {
+                case EVENT_SYSTEM_PROMPT:
+                    chatbox.innerHTML += `<p>Applied submitted by user system prompt.</p>`;
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    break;
+                case EVENT_USER_PROMPT:
+                    addSpinner();
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    break;
+                case EVENT_RESET_HISTORY:
+                    chatbox.innerHTML += `<p>Reset request history.</p>`;
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    break;
+                case EVENT_ENABLE_HISTORY:
+                    chatbox.innerHTML += `<p>Request history has been enabled.</p>`;
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    enableControlElement('disableHistory');
+                    break;
+                case EVENT_DISABLE_HISTORY:
+                    chatbox.innerHTML += `<p>Request history has been disabled.</p>`;
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    enableControlElement('enableHistory');
+                    break;
+                default:
+                    console.log('Unexpected confirmed event type: ' + confirmedEventType);
+                    console.log('event data: ' + event.data);
+            }
             break;
         case EVENT_PING:
             ws.send(EVENT_PONG + ":" + 'pong');
@@ -88,7 +125,7 @@ function readMessage(event) {
         case EVENT_PONG:
             break;
         default:
-            console.log('Unexpected event type ' + eventType);
+            console.log('Unexpected event type: ' + eventType);
     }
 }
 
@@ -117,18 +154,27 @@ function disableControlElement(controlElement) {
     }
 }
 
+function resetHistory() {
+    if (ws.readyState === WebSocket.CLOSED) {
+        startWebsocket();
+    }
+    ws.send(EVENT_RESET_HISTORY + ":");
+}
+
 function disableHistory() {
     disableControlElement('disableHistory');
-    setTimeout(() => {
-        enableControlElement('enableHistory');
-    }, 100);
+    if (ws.readyState === WebSocket.CLOSED) {
+        startWebsocket();
+    }
+    ws.send(EVENT_DISABLE_HISTORY + ":");
 }
 
 function enableHistory() {
     disableControlElement('enableHistory');
-    setTimeout(() => {
-        enableControlElement('disableHistory');
-    }, 100);
+    if (ws.readyState === WebSocket.CLOSED) {
+        startWebsocket();
+    }
+    ws.send(EVENT_ENABLE_HISTORY + ":");
 }
 
 function showTooltip(element, text, event) {

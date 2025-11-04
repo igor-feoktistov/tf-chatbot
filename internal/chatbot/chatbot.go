@@ -110,7 +110,7 @@ func (chatBot *ChatBot) Run() {
 	}
 }
 
-func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userPrompt string) chan string {
+func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userPrompt string, resetHistory bool) chan string {
 	responseChan := make(chan string)
 	var systemPrompt string
 	var messages []openai.ChatCompletionMessageParamUnion
@@ -197,14 +197,18 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 		if err := stream.Err(); err == nil {
 			if acc.Usage.TotalTokens >  0 {
 				log.Printf("INFO: finished completion streaming, total tokens: %d", acc.Usage.TotalTokens)
+				var tokens int64
+				if v := session.Get("tokens"); v != nil {
+					tokens = v.(int64)
+				}
+				tokens += acc.Usage.TotalTokens
+				session.Set("tokens", tokens)
+				session.Save()
+				responseChan <- fmt.Sprintf("<p>LLM usage report: tokens=<strong>%d</strong>, total=<strong>%d</strong></p>", acc.Usage.TotalTokens, tokens)
 			}
 			// Preserve last conversation history
 			if chatBot.config.ChatOptions.ChatHistory {
-				messages = []openai.ChatCompletionMessageParamUnion{
-					openai.SystemMessage(systemPrompt),
-					openai.UserMessage(userPrompt),
-					openai.AssistantMessage(strings.Join(completeResponse, "")),
-				}
+				messages = append(messages, openai.AssistantMessage(strings.Join(completeResponse, "")))
 				session.Set("messages", messages)
 				session.Save()
 			}
