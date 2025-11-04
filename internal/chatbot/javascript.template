@@ -30,7 +30,7 @@ userPrompt.addEventListener('keydown', function(event) {
 });
 
 function startWebsocket() {
-    ws = new WebSocket("ws://" + window.location.host + "/ws");
+    ws = new WebSocket("wss://" + window.location.host + "/ws");
     ws.addEventListener('open', (event) => {
         userPrompt.disabled = false;
         connect.style.visibility = "hidden";
