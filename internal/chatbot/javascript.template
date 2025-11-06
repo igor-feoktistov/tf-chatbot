@@ -1,15 +1,16 @@
-const EVENT_USER_PROMPT      = "01"
-const EVENT_SYSTEM_PROMPT    = "02"
-const EVENT_ASSISTANT_WAIT   = "03"
-const EVENT_ASSISTANT_OUTPUT = "04"
-const EVENT_ASSISTANT_FINISH = "05"
-const EVENT_PING             = "06"
-const EVENT_PONG             = "07"
-const EVENT_DIAGNOSTIC       = "08"
-const EVENT_CONFIRMED        = "09"
-const EVENT_RESET_HISTORY    = "10"
-const EVENT_ENABLE_HISTORY   = "11"
-const EVENT_DISABLE_HISTORY  = "12"
+const EVENT_USER_PROMPT        = "01"
+const EVENT_SYSTEM_PROMPT      = "02"
+const EVENT_ASSISTANT_WAIT     = "03"
+const EVENT_ASSISTANT_OUTPUT   = "04"
+const EVENT_ASSISTANT_FINISH   = "05"
+const EVENT_PING               = "06"
+const EVENT_PONG               = "07"
+const EVENT_DIAGNOSTIC         = "08"
+const EVENT_CONFIRMED          = "09"
+const EVENT_RESET_HISTORY      = "10"
+const EVENT_ENABLE_HISTORY     = "11"
+const EVENT_DISABLE_HISTORY    = "12"
+const EVENT_CANCEL_USER_PROMPT = "14"
 
 const robot = document.getElementById("robot");
 const chatbox = document.getElementById('chatbox');
@@ -19,7 +20,7 @@ const connect = document.getElementById("connect");
 
 var ws = null;
 
-chatbox.innerHTML += `<h3>Assistant</h3></div>Hello! How can I help you today?`;
+chatbox.innerHTML = `<h3>Assistant</h3></div>Hello! How can I help you today?`;
 chatbox.scrollTop = chatbox.scrollHeight;
 
 userPrompt.addEventListener('keydown', function(event) {
@@ -30,7 +31,7 @@ userPrompt.addEventListener('keydown', function(event) {
 });
 
 function startWebsocket() {
-    ws = new WebSocket("wss://" + window.location.host + "/ws");
+    ws = new WebSocket("ws://" + window.location.host + "/ws");
     ws.addEventListener('open', (event) => {
         userPrompt.disabled = false;
         connect.style.visibility = "hidden";
@@ -69,7 +70,29 @@ function sendUserPrompt() {
         userPrompt.value = '';
         chatbox.scrollTop = chatbox.scrollHeight;
         robot.src="/static/icons/robot_animated.gif";
+        userPrompt.disabled = true;
     }
+}
+
+function cancelUserPrompt() {
+    if (ws.readyState === WebSocket.CLOSED) {
+        startWebsocket();
+    }
+    ws.send(EVENT_CANCEL_USER_PROMPT + ":");
+}
+
+function openAbout() {
+    document.getElementById('aboutWindow').style.display = 'flex';
+}
+
+function closeAbout() {
+    document.getElementById('aboutWindow').style.display = 'none';
+}
+
+function about() {
+    const aboutUrl = 'about.html';
+    const windowFeatures = 'width=400,height=300,toolbar=no,menubar=no,location=no,status=no,resizable=no,scrollbars=no';
+    window.open(aboutUrl, 'AboutWindow', windowFeatures);
 }
 
 function readMessage(event) {
@@ -88,6 +111,7 @@ function readMessage(event) {
         case EVENT_ASSISTANT_FINISH:
             deleteSpinner();
             robot.src="/static/icons/robot.png";
+            userPrompt.disabled = false;
             break;
         case EVENT_CONFIRMED:
             const confirmedEventType = event.data.substring(3, 5);
@@ -113,6 +137,10 @@ function readMessage(event) {
                     chatbox.innerHTML += `<p>Request history has been disabled.</p>`;
                     chatbox.scrollTop = chatbox.scrollHeight;
                     enableControlElement('enableHistory');
+                    break;
+                case EVENT_CANCEL_USER_PROMPT:
+                    chatbox.innerHTML += `<p>User request has been canceled.</p>`;
+                    chatbox.scrollTop = chatbox.scrollHeight;
                     break;
                 default:
                     console.log('Unexpected confirmed event type: ' + confirmedEventType);
@@ -177,6 +205,11 @@ function enableHistory() {
     ws.send(EVENT_ENABLE_HISTORY + ":");
 }
 
+function clearChat() {
+    chatbox.innerHTML = `<h3>Assistant</h3></div>Hello! How can I help you today?`;
+    chatbox.scrollTop = chatbox.scrollHeight;
+}
+
 function showTooltip(element, text, event) {
     const tooltip = document.createElement('div');
     tooltip.className = 'dynamic-tooltip';
@@ -184,8 +217,8 @@ function showTooltip(element, text, event) {
     tooltip.id = 'active-tooltip';
     document.body.appendChild(tooltip);
     const rect = element.getBoundingClientRect();
-    tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
-    tooltip.style.top = (rect.top + tooltip.offsetHeight) + 'px';
+    tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 15) + 'px';
+    tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
     setTimeout(() => {
         tooltip.classList.add('visible');
     }, 1);

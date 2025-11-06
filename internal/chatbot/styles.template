@@ -1,25 +1,32 @@
-.* { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; }
+.* { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; font-size: 14px; }
 .header { display: flex; padding: 10px; background-color: #ffffff; }
-.top-panel { padding: 10px; background-color: #ffffff; }
+.top-panel { padding: 4px; background-color: #ffffff; }
 .chat { padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 10px; background-color: #e9ecef; }
+.tool-call { padding: 0px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 10px; background-color: #e9ecef; }
+.about-window { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
 .dynamic-tooltip { position: absolute; background-color: #e9ecef; color: black; padding: 4px 6px; border-radius: 4px; font-size: 14px; z-index: 1000; pointer-events: none; opacity: 0; transition: opacity 0.3s ease; }
 .dynamic-tooltip.visible { opacity: 1; }
 .controlImage {}
 .controlImage:active { transform:scale(0.8); }
 #topPanel { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
-#systemPromptDetails { width: 60%; height: 40px; background-color: #ffffff; display: inline-block; }
+#systemPromptDetails { width: 60%; height: 40px; background-color: #ffffff; display: inline-block; vertical-align: middle; padding: 0; }
 #systemPromptSummary { width: 99%; background-color: #ffffff; }
+#systemPrompt { align-items: center; }
 #systemPromptText { width: 99%; color: #ffffff; background-color: #00000f; }
-#sendSystemPromptButton { border: 2px solid black; background-color: #c0c0c0; }
-#controlPanel { width: 38%; height: 40px; border: 2px solid black; border-radius: 10px; background-color: display: inline-block; position: relative; }
-#resetHistory { position: absolute; top: 10px; left: 30px; }
-#disableHistory { display: none; position: absolute; top: 10px; left: 70px; }
-#enableHistory { display: none; position: absolute; top: 10px; left: 70px; }
+#systemPromptEnter { vertical-align: middle; }
+#systemPromptClear { vertical-align: middle; float: right;  margin-right: 20px; }
+#systemPromptLoad { vertical-align: middle; float: right; margin-right: 20px; }
+#controlPanel { width: 39%; height: 30px; border: 2px solid black; border-radius: 10px; background-color: display: inline-block; position: relative; }
+#resetHistory { position: absolute; top: 5px; left: 30px; }
+#disableHistory { display: none; position: absolute; top: 5px; left: 70px; }
+#enableHistory { display: none; position: absolute; top: 5px; left: 70px; }
+#clearChat { position: absolute; top: 5px; left: 120px; }
+#about { position: absolute; top: 5px; left: 250px; }
+#aboutWindowContent { background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
 #chatbox { height: 800px; overflow-y: scroll; border: 2px solid black; min-height: 70vh; resize: both; }
 #toolCall { background-color: #ffffff; resize: both; }
-#userPrompt { display: flex; align-items: center; }
+#userPrompt { display: flex; align-items: center; height: 30px; }
 #userPromptText { width: 60%; background-color: #ffffff; margin-right: 10px; display: inline-block; }
-#sendUserPromptButton { border: 2px solid black; background-color: #c0c0c0; margin-left: 10px; display: inline-block; }
 #spinner { display: flex; padding: 15px; align-items: center; }
 #connect { display: flex; margin-left: 10px; align-items: center; visibility: hidden; }
 #robot { display: flex; }

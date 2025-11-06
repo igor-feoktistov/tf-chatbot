@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"log"
+	"context"
 	"net/http"
 	"regexp"
 	_ "embed"
@@ -15,18 +16,19 @@ import (
 )
 
 const (
-	EventUserPrompt      = "01"
-	EventSystemPrompt    = "02"
-	EventAssistantWait   = "03"
-	EventAssistantOutput = "04"
-	EventAssistantFinish = "05"
-	EventPing            = "06"
-	EventPong            = "07"
-	EventDiagnostic      = "08"
-	EventConfirmed       = "09"
-	EventResetHistory    = "10"
-	EventEnableHistory   = "11"
-	EventDisableHistory  = "12"
+	EventUserPrompt       = "01"
+	EventSystemPrompt     = "02"
+	EventAssistantWait    = "03"
+	EventAssistantOutput  = "04"
+	EventAssistantFinish  = "05"
+	EventPing             = "06"
+	EventPong             = "07"
+	EventDiagnostic       = "08"
+	EventConfirmed        = "09"
+	EventResetHistory     = "10"
+	EventEnableHistory    = "11"
+	EventDisableHistory   = "12"
+	EventCancelUserPrompt = "14"
 )
 
 //go:embed index.template
@@ -65,7 +67,8 @@ func handleIndex(c *gin.Context) {
 		}
 	}
 	c.HTML(http.StatusOK, "index.html", gin.H{
-		"Header": "ChatBot",
+		"version": chatBot.version,
+		"config": chatBot.config,
 	})
 }
 
@@ -122,6 +125,8 @@ func handleWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 	resetHistory := true
+	var responseChan chan string
+	var cancel context.CancelFunc
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
@@ -157,7 +162,7 @@ func handleWebSocket(c *gin.Context) {
 			case EventUserPrompt:
 				// Process user prompt
 				go func() {
-					responseChan := chatBot.startCompletionStream(session, string(message[3:]), resetHistory)
+					responseChan, cancel = chatBot.startCompletionStream(session, string(message[3:]), resetHistory)
 					for chunk := range responseChan {
 						if err = conn.WriteMessage(messageType, []byte(EventAssistantOutput + ":" + chunk)); err != nil {
 							break
@@ -170,8 +175,14 @@ func handleWebSocket(c *gin.Context) {
 						err = conn.WriteMessage(messageType, []byte(EventAssistantFinish))
 					}
 					resetHistory = false
+					cancel = nil
 				}()
 				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventUserPrompt))
+			case EventCancelUserPrompt:
+				if cancel != nil {
+					cancel()
+					err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventCancelUserPrompt))
+				}
 			case EventSystemPrompt:
 				// Save system prompt
 				session.Set("systemPrompt", string(message[3:]))

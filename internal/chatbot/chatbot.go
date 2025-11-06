@@ -22,10 +22,12 @@ import (
 )
 
 const (
+        VERSION = "1.0.14"
 	LLM_STREAM_TIMEOUT = 300
 )
 
 type mcpServer struct {
+	Name           string `yaml:"name"           json:"name"`
 	IntegrationFqn string `yaml:"integrationFqn" json:"integration_fqn"`
 	EnableAllTools bool   `yaml:"enableAllTools" json:"enable_all_tools"`
 	Tools []struct {
@@ -57,6 +59,7 @@ type ToolContent struct {
 }
 
 type ChatBot struct {
+        version    string
         config     *chatBotConfig
         staticPath string
 }
@@ -80,6 +83,7 @@ func ChatBotInitialize(configPath string, staticPath string) (chatBot *ChatBot, 
 		config.SystemPrompt = string(b)
 	}
 	chatBot = &ChatBot{
+		version: VERSION,
 		config: config,
 		staticPath: staticPath,
 	}
@@ -110,10 +114,10 @@ func (chatBot *ChatBot) Run() {
 	}
 }
 
-func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userPrompt string, resetHistory bool) chan string {
-	responseChan := make(chan string)
+func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userPrompt string, resetHistory bool) (chan string, context.CancelFunc) {
 	var systemPrompt string
 	var messages []openai.ChatCompletionMessageParamUnion
+	responseChan := make(chan string)
 	if v := session.Get("systemPrompt"); v != nil {
 		systemPrompt = v.(string)
 	}
@@ -150,9 +154,9 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 		}
 	}
 	openaiParams.Messages = messages
+	ctx, cancel := context.WithTimeout(context.Background(), LLM_STREAM_TIMEOUT * time.Second)
 	go func() {
 		defer close(responseChan)
-		ctx, cancel := context.WithTimeout(context.Background(), LLM_STREAM_TIMEOUT * time.Second)
 		defer cancel()
 		stream := openaiClient.Chat.Completions.NewStreaming(ctx, openaiParams)
 		defer stream.Close()
@@ -183,7 +187,7 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 					content := Content{}
 					if err := json.Unmarshal([]byte(chunk.Choices[0].Delta.Content), &content); err == nil {
 						if len(content.Content) > 0 {
-							responseChan <- fmt.Sprintf(`<details class="chat"><summary class="chat">tool call</summary><div class="chat"><textarea class="chat" id="toolCall" rows="12" cols="128">%s</textarea></div></details>`, content.Content[0].Text)
+							responseChan <- fmt.Sprintf(`<details class="tool-call"><summary class="chat">tool call</summary><div class="chat"><textarea class="chat" id="toolCall" rows="12" cols="128">%s</textarea></div></details>`, content.Content[0].Text)
 						}
 					}
 					continue
@@ -217,5 +221,5 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 			responseChan <- `<p style="color: red;"><strong>LLM stream response error: </strong>` + err.Error() + `</p>`
 		}
 	}()
-	return responseChan
+	return responseChan, cancel
 }

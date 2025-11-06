@@ -8,26 +8,55 @@
 </head>
 <body>
   <div class="header">
-    <div><img id="robot" src="/static/icons/robot.png" class="controlImage"></div>
-    <div><h2>{{.Header}}</h2></div>
+    <div><img id="robot" src="/static/icons/robot.png" onClick="openAbout() "class="controlImage"></div>
+    <div><h2>AI chatbot</h2></div>
   </div>
   <div class="top-panel" id="topPanel">
     <div id="controlPanel">
       <div id="resetHistory" data-tooltip="Reset request history"><img src="/static/icons/reset.png" type="button" onClick="resetHistory()" class="controlImage"></div>
       <div  id="disableHistory" data-tooltip="Disable request history"><img src="/static/icons/toggle_on.png" type="button" onClick="disableHistory()" class="controlImage"></div>
       <div class="controlImage" id="enableHistory" data-tooltip="Enable request history"><img src="/static/icons/toggle_off.png" type="button" onClick="enableHistory()" class="controlImage"></div>
+      <div class="controlImage" id="clearChat" data-tooltip="Remove all the mesages from the chat window"><img src="/static/icons/clear_white.png" type="button" onClick="clearChat()" class="controlImage"></div>
+      <div class="controlImage" id="about" data-tooltip="About"><img src="/static/icons/about.png" type="button" onClick="openAbout()" class="controlImage"></div>
+      <div id="aboutWindow" class="about-window">
+        <div id="aboutWindowContent">
+          <img src="/static/icons/robot.png">
+          <p>Version: {{.version}}</p>
+          <p>Configuration
+            <ul>
+              <li>model: {{.config.Model}}</li>
+              <li>MCP servers:
+                <ul>
+                  {{range .config.McpServers}}
+                  <li>name: {{.Name}}</li>
+                  <li>tools:
+                    <ul>
+                    {{range .Tools}}
+                      <li>{{.Name}}</li>
+                    {{end}}
+                    </ul>
+                  {{end}}
+                </ul>
+            </ul>
+          </p>
+          <img src="/static/icons/ok.png" type="button" onClick="closeAbout()" class="controlImage">
+        </div>
+      </div>
     </div>
     <details class="chat" id="systemPromptDetails"><summary class="chat" id="systemPromptSummary">System Prompt</summary>
-      <div>
+      <div id="systemPrompt">
         <textarea class="chat" id="systemPromptText" rows="12" cols="128" placeholder="Enter system prompt..."></textarea><br>
-        <img src="/static/icons/enter_gray.png" type="button" onClick="sendSystemPrompt()" class="controlImage">
+        <img id="systemPromptEnter" src="/static/icons/enter_gray.png" type="button" onClick="sendSystemPrompt()" class="controlImage">
+        <img id="systemPromptClear" src="/static/icons/clear_gray.png" type="button" onClick="clearSystemPrompt()" class="controlImage">
+        <img id="systemPromptLoad" src="/static/icons/download_gray.png" type="button" onClick="downloadSystemPrompt()" class="controlImage">
       </div>
     </details>
-  </div><br>
+  </div>
   <div class="chat" id="chatbox"></div><br>
   <div id="userPrompt">
     <input class="chat" type="text" id="userPromptText" placeholder="Enter your message...">
-    <img src="/static/icons/enter_white.png" type="button" onClick="sendUserPrompt()" class="controlImage">
+    <img src="/static/icons/enter_white.png" type="button" onClick="sendUserPrompt()" class="controlImage">&nbsp;&nbsp;
+    <img src="/static/icons/cancel.png" type="button" onClick="cancelUserPrompt()" class="controlImage">
     <div id="connect"><img src="/static/icons/connect.gif">&nbsp;Connecting...</div>
   </div>
   <script src="/javascript.js"></script>
