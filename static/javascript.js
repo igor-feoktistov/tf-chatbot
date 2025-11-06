@@ -11,36 +11,51 @@ const EVENT_RESET_HISTORY      = "10"
 const EVENT_ENABLE_HISTORY     = "11"
 const EVENT_DISABLE_HISTORY    = "12"
 const EVENT_CANCEL_USER_PROMPT = "14"
+const EVENT_LOAD_SYSTEM_PROMPT = "15"
 
 const robot = document.getElementById("robot");
 const chatbox = document.getElementById('chatbox');
 const systemPrompt = document.getElementById('systemPromptText');
 const userPrompt = document.getElementById('userPromptText');
 const connect = document.getElementById("connect");
+const aboutWindow = document.getElementById("aboutWindow");
 
 var ws = null;
+var vs_protocol = "ws";
 
 chatbox.innerHTML = `<h3>Assistant</h3></div>Hello! How can I help you today?`;
 chatbox.scrollTop = chatbox.scrollHeight;
 
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Enter" || event.key === "Escape") {
+        if (aboutWindow.style.display === "flex") {
+            aboutWindow.style.display = "none";
+        }
+    }
+});
+
 userPrompt.addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
         event.preventDefault();
         sendUserPrompt();
     }
 });
 
 function startWebsocket() {
-    ws = new WebSocket("ws://" + window.location.host + "/ws");
-    ws.addEventListener('open', (event) => {
+    if (window.location.protocol === "https:") {
+        ws = new WebSocket("wss://" + window.location.host + "/ws");
+    } else {
+        ws = new WebSocket("ws://" + window.location.host + "/ws");
+    }
+    ws.addEventListener("open", (event) => {
         userPrompt.disabled = false;
         connect.style.visibility = "hidden";
         console.log('Websocket is connected!');
     });
-    ws.addEventListener('message', (event) => {
+    ws.addEventListener("message", (event) => {
         ws.onmessage = readMessage(event);
     });
-    ws.addEventListener('close', (event) => {
+    ws.addEventListener("close", (event) => {
         userPrompt.disabled = true;
         connect.style.visibility = "visible";
         checkWebsocket();
@@ -67,7 +82,7 @@ function sendUserPrompt() {
     if (message.trim().length > 0) {
         chatbox.innerHTML += `<div><h3>User</h3>${message}<h3>Assistant</h3></div>`;
         ws.send(EVENT_USER_PROMPT + ":" + message);
-        userPrompt.value = '';
+        userPrompt.value = "";
         chatbox.scrollTop = chatbox.scrollHeight;
         robot.src="/static/icons/robot_animated.gif";
         userPrompt.disabled = true;
@@ -82,17 +97,11 @@ function cancelUserPrompt() {
 }
 
 function openAbout() {
-    document.getElementById('aboutWindow').style.display = 'flex';
+    aboutWindow.style.display = "flex";
 }
 
 function closeAbout() {
-    document.getElementById('aboutWindow').style.display = 'none';
-}
-
-function about() {
-    const aboutUrl = 'about.html';
-    const windowFeatures = 'width=400,height=300,toolbar=no,menubar=no,location=no,status=no,resizable=no,scrollbars=no';
-    window.open(aboutUrl, 'AboutWindow', windowFeatures);
+    aboutWindow.style.display = "none";
 }
 
 function readMessage(event) {
@@ -112,6 +121,9 @@ function readMessage(event) {
             deleteSpinner();
             robot.src="/static/icons/robot.png";
             userPrompt.disabled = false;
+            break;
+        case EVENT_LOAD_SYSTEM_PROMPT:
+            systemPrompt.value = event.data.substring(3);
             break;
         case EVENT_CONFIRMED:
             const confirmedEventType = event.data.substring(3, 5);
@@ -153,7 +165,7 @@ function readMessage(event) {
         case EVENT_PONG:
             break;
         default:
-            console.log('Unexpected event type: ' + eventType);
+            console.log("Unexpected event type: " + eventType);
     }
 }
 
@@ -162,7 +174,7 @@ function addSpinner() {
 }
 
 function deleteSpinner() {
-    const spinner = document.getElementById('spinner');
+    const spinner = document.getElementById("spinner");
     if (spinner) {
         chatbox.removeChild(spinner);
     }
@@ -171,14 +183,14 @@ function deleteSpinner() {
 function enableControlElement(controlElement) {
     const element = document.getElementById(controlElement);
     if (element) {
-        element.style.display = 'flex';
+        element.style.display = "flex";
     }
 }
 
 function disableControlElement(controlElement) {
     const element = document.getElementById(controlElement);
     if (element) {
-        element.style.display = 'none';
+        element.style.display = "none";
     }
 }
 
@@ -190,7 +202,7 @@ function resetHistory() {
 }
 
 function disableHistory() {
-    disableControlElement('disableHistory');
+    disableControlElement("disableHistory");
     if (ws.readyState === WebSocket.CLOSED) {
         startWebsocket();
     }
@@ -198,7 +210,7 @@ function disableHistory() {
 }
 
 function enableHistory() {
-    disableControlElement('enableHistory');
+    disableControlElement("enableHistory");
     if (ws.readyState === WebSocket.CLOSED) {
         startWebsocket();
     }
@@ -210,24 +222,46 @@ function clearChat() {
     chatbox.scrollTop = chatbox.scrollHeight;
 }
 
+function clearSystemPrompt() {
+    systemPrompt.value = "";
+}
+
+function loadSystemPrompt() {
+    if (ws.readyState === WebSocket.CLOSED) {
+        startWebsocket();
+    }
+    ws.send(EVENT_LOAD_SYSTEM_PROMPT + ":");
+}
+
 function showTooltip(element, text, event) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'dynamic-tooltip';
+    const tooltip = document.createElement("div");
+    tooltip.className = "dynamic-tooltip";
     tooltip.textContent = text;
-    tooltip.id = 'active-tooltip';
+    tooltip.id = "active-tooltip";
     document.body.appendChild(tooltip);
     const rect = element.getBoundingClientRect();
-    tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 15) + 'px';
-    tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
+    let left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 15;
+    let top = rect.top - tooltip.offsetHeight - 5;
+    if (left < 10) {
+        left = 10;
+    }
+    if ((left + tooltip.offsetWidth) > (window.innerWidth - 10)) {
+        left = window.innerWidth - tooltip.offsetWidth - 10;
+    }
+    if (top < 10) {
+        top = rect.bottom + 10;
+    }
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
     setTimeout(() => {
-        tooltip.classList.add('visible');
+        tooltip.classList.add("visible");
     }, 1);
 }
 
 function hideTooltip() {
-    const tooltip = document.getElementById('active-tooltip');
+    const tooltip = document.getElementById("active-tooltip");
     if (tooltip) {
-        tooltip.classList.remove('visible');
+        tooltip.classList.remove("visible");
         setTimeout(() => {
             tooltip.remove();
         }, 10);
@@ -237,14 +271,14 @@ function hideTooltip() {
 startWebsocket();
 setInterval(checkWebsocket, 5000);
 
-document.querySelectorAll('[data-tooltip]').forEach(element => {
-    element.addEventListener('mouseenter', function(event) {
-        const tooltipText = this.getAttribute('data-tooltip');
+document.querySelectorAll("[data-tooltip]").forEach(element => {
+    element.addEventListener("mouseenter", function(event) {
+        const tooltipText = this.getAttribute("data-tooltip");
         showTooltip(this, tooltipText, event);
     });
-    element.addEventListener('mouseleave', function() {
+    element.addEventListener("mouseleave", function() {
         hideTooltip();
     });
 });
 
-enableControlElement('disableHistory');
+enableControlElement("disableHistory");

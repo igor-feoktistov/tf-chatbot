@@ -22,7 +22,7 @@ import (
 )
 
 const (
-        VERSION = "1.0.14"
+        VERSION = "1.0.15"
 	LLM_STREAM_TIMEOUT = 300
 )
 
@@ -101,13 +101,9 @@ func (chatBot *ChatBot) Run() {
 		c.Next()
 	})
 	renderer.AddFromString("index.html", indexHTML)
-	renderer.AddFromString("javascript.js", javascriptJS)
-	renderer.AddFromString("styles.css", stylesCSS)
 	router.HTMLRender = renderer
 	router.Static("/static", chatBot.staticPath)
 	router.GET("/", handleIndex)
-	router.GET("javascript.js", handleJavascript)
-	router.GET("styles.css", handleStyles)
 	router.GET("/ws", handleWebSocket)
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to run server: %v", err)

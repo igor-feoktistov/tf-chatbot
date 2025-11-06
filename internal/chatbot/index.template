@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" type="text/css" href="/styles.css">
+  <link rel="stylesheet" type="text/css" href="/static/styles.css">
   <title>{{.Header}}</title>
 </head>
 <body>
@@ -28,7 +28,7 @@
               <li>MCP servers:
                 <ul>
                   {{range .config.McpServers}}
-                  <li>name: {{.Name}}</li>
+                  <li>{{.Name}}</li>
                   <li>tools:
                     <ul>
                     {{range .Tools}}
@@ -47,8 +47,8 @@
       <div id="systemPrompt">
         <textarea class="chat" id="systemPromptText" rows="12" cols="128" placeholder="Enter system prompt..."></textarea><br>
         <img id="systemPromptEnter" src="/static/icons/enter_gray.png" type="button" onClick="sendSystemPrompt()" class="controlImage">
-        <img id="systemPromptClear" src="/static/icons/clear_gray.png" type="button" onClick="clearSystemPrompt()" class="controlImage">
-        <img id="systemPromptLoad" src="/static/icons/download_gray.png" type="button" onClick="downloadSystemPrompt()" class="controlImage">
+        <img id="systemPromptClear" data-tooltip="Clear input" src="/static/icons/clear_gray.png" type="button" onClick="clearSystemPrompt()" class="controlImage">
+        <img id="systemPromptLoad" data-tooltip="Load system prompt" src="/static/icons/download_gray.png" type="button" onClick="loadSystemPrompt()" class="controlImage">
       </div>
     </details>
   </div>
@@ -56,9 +56,9 @@
   <div id="userPrompt">
     <input class="chat" type="text" id="userPromptText" placeholder="Enter your message...">
     <img src="/static/icons/enter_white.png" type="button" onClick="sendUserPrompt()" class="controlImage">&nbsp;&nbsp;
-    <img src="/static/icons/cancel.png" type="button" onClick="cancelUserPrompt()" class="controlImage">
+    <img data-tooltip="Cancel LLM request" src="/static/icons/cancel.png" type="button" onClick="cancelUserPrompt()" class="controlImage">
     <div id="connect"><img src="/static/icons/connect.gif">&nbsp;Connecting...</div>
   </div>
-  <script src="/javascript.js"></script>
+  <script src="/static/javascript.js"></script>
 </body>
 </html>

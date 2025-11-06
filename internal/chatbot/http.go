@@ -29,16 +29,11 @@ const (
 	EventEnableHistory    = "11"
 	EventDisableHistory   = "12"
 	EventCancelUserPrompt = "14"
+	EventLoadSystemPrompt = "15"
 )
 
 //go:embed index.template
 var indexHTML string
-
-//go:embed javascript.template
-var javascriptJS string
-
-//go:embed styles.template
-var stylesCSS string
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -70,15 +65,6 @@ func handleIndex(c *gin.Context) {
 		"version": chatBot.version,
 		"config": chatBot.config,
 	})
-}
-
-func handleJavascript(c *gin.Context) {
-	c.HTML(http.StatusOK, "javascript.js", gin.H{})
-}
-
-func handleStyles(c *gin.Context) {
-	c.Header("Content-Type", "text/css")
-	c.HTML(http.StatusOK, "styles.css", gin.H{})
 }
 
 func keepalive(conn *websocket.Conn) {
@@ -153,6 +139,7 @@ func handleWebSocket(c *gin.Context) {
 			session := sessions.Default(c)
 			switch subMatch[1] {
 			case EventPing:
+				log.Printf("INFO: received EventPing")
 				if err := conn.WriteMessage(messageType, []byte(EventPong + ":pong")); err != nil {
 					log.Printf("ERROR: failed to send PONG message: %s", err)
 					return
@@ -161,6 +148,7 @@ func handleWebSocket(c *gin.Context) {
 				log.Printf("INFO: received PONG reply")
 			case EventUserPrompt:
 				// Process user prompt
+				log.Printf("INFO: received EventUserPrompt")
 				go func() {
 					responseChan, cancel = chatBot.startCompletionStream(session, string(message[3:]), resetHistory)
 					for chunk := range responseChan {
@@ -180,11 +168,17 @@ func handleWebSocket(c *gin.Context) {
 				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventUserPrompt))
 			case EventCancelUserPrompt:
 				if cancel != nil {
+					log.Printf("INFO: received EventCancelUserPrompt")
 					cancel()
 					err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventCancelUserPrompt))
+					messages := []openai.ChatCompletionMessageParamUnion{}
+					session.Set("messages", messages)
+					session.Save()
+					resetHistory = true
 				}
 			case EventSystemPrompt:
 				// Save system prompt
+				log.Printf("INFO: received EventSystemPrompt")
 				session.Set("systemPrompt", string(message[3:]))
 				messages := []openai.ChatCompletionMessageParamUnion{}
 				session.Set("messages", messages)
@@ -211,6 +205,10 @@ func handleWebSocket(c *gin.Context) {
 				log.Printf("INFO: received EventEnableHistory")
 				chatBot.config.ChatOptions.ChatHistory = true
 				err = conn.WriteMessage(messageType, []byte(EventConfirmed + ":" + EventEnableHistory))
+			case EventLoadSystemPrompt:
+				// Load system prompt
+				log.Printf("INFO: received EventLoadSystemPrompt")
+				err = conn.WriteMessage(messageType, []byte(EventLoadSystemPrompt + ":" + chatBot.config.SystemPrompt))
 			default:
 				log.Printf("ERROR: received unrecognized websocket event: %s", string(message))
 				conn.WriteMessage(messageType, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>` + fmt.Sprintf("received unrecognized websocket event: \"%s\"", string(message)) + `</p>`))
