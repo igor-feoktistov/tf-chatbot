@@ -1,0 +1,13 @@
+baseUrl: https://cp.tf.example.com/api/llm/agent
+sessionKey: session_example
+model: prod/us-anthropic-claude-sonnet-4-20250514-v1-0
+systemPrompt: QTx3Y<reducted>=
+chatOptions:
+  chatHistory: true
+mcpServers:
+  - name: kubectl-aws-us-east-1
+    integrationFqn: example:hosted-mcp-server:example-group:mcp-server:kubectl-aws-us-east-1
+    enable_all_tools: false
+    tools:
+      - name: bash
+      - name: kubectl
