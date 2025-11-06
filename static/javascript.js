@@ -34,7 +34,7 @@ document.addEventListener("keydown", function(event) {
     }
 });
 
-userPrompt.addEventListener('keydown', function(event) {
+userPrompt.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         event.preventDefault();
         sendUserPrompt();

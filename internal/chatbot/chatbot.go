@@ -14,9 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-contrib/sessions"
-        "github.com/gin-contrib/sessions/cookie"
-        "github.com/openai/openai-go/v3"
-        "github.com/openai/openai-go/v3/option"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
 
 	"tf-chatbot/internal/utils"
 )
@@ -113,6 +113,7 @@ func (chatBot *ChatBot) Run() {
 func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userPrompt string, resetHistory bool) (chan string, context.CancelFunc) {
 	var systemPrompt string
 	var messages []openai.ChatCompletionMessageParamUnion
+	logger := log.New(gin.DefaultWriter, "[CHATBOT] ", log.LstdFlags)
 	responseChan := make(chan string)
 	if v := session.Get("systemPrompt"); v != nil {
 		systemPrompt = v.(string)
@@ -196,7 +197,7 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 		}
 		if err := stream.Err(); err == nil {
 			if acc.Usage.TotalTokens >  0 {
-				log.Printf("INFO: finished completion streaming, total tokens: %d", acc.Usage.TotalTokens)
+				logger.Printf("INFO: finished completion streaming, total tokens: %d", acc.Usage.TotalTokens)
 				var tokens int64
 				if v := session.Get("tokens"); v != nil {
 					tokens = v.(int64)
@@ -206,14 +207,14 @@ func (chatBot *ChatBot) startCompletionStream(session sessions.Session, userProm
 				session.Save()
 				responseChan <- fmt.Sprintf("<p>LLM usage report: tokens=<strong>%d</strong>, total=<strong>%d</strong></p>", acc.Usage.TotalTokens, tokens)
 			}
-			// Preserve last conversation history
+			// Preserve conversation history
 			if chatBot.config.ChatOptions.ChatHistory {
 				messages = append(messages, openai.AssistantMessage(strings.Join(completeResponse, "")))
 				session.Set("messages", messages)
 				session.Save()
 			}
 		} else {
-			log.Printf("ERROR: LLM stream response error: %s", err)
+			logger.Printf("ERROR: LLM stream response error: %s", err)
 			responseChan <- `<p style="color: red;"><strong>LLM stream response error: </strong>` + err.Error() + `</p>`
 		}
 	}()
