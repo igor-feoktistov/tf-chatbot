@@ -17,13 +17,18 @@ const robot = document.getElementById("robot");
 const chatbox = document.getElementById('chatbox');
 const systemPrompt = document.getElementById('systemPromptText');
 const userPrompt = document.getElementById('userPromptText');
+const userName = document.getElementById('userName');
 const connect = document.getElementById("connect");
 const aboutWindow = document.getElementById("aboutWindow");
 
 var ws = null;
 var vs_protocol = "ws";
 
-chatbox.innerHTML = `<h3>Assistant</h3></div>Hello! How can I help you today?`;
+if (userName.textContent === "") {
+    chatbox.innerHTML = "<h3>Assistant</h3></div>Hello! How can I help you today?";
+} else {
+    chatbox.innerHTML = "<h3>Assistant</h3></div>Hello <strong>" + userName.textContent + "</strong>! How can I help you today?";
+}
 chatbox.scrollTop = chatbox.scrollHeight;
 
 document.addEventListener("keydown", function(event) {
@@ -218,8 +223,17 @@ function enableHistory() {
 }
 
 function clearChat() {
-    chatbox.innerHTML = `<h3>Assistant</h3></div>Hello! How can I help you today?`;
+    if (userName.textContent === "") {
+        chatbox.innerHTML = "<h3>Assistant</h3></div>Hello! How can I help you today?";
+    } else {
+        chatbox.innerHTML = "<h3>Assistant</h3></div>Hello <strong>" + userName.textContent + "</strong>! How can I help you today?";
+    }
     chatbox.scrollTop = chatbox.scrollHeight;
+}
+
+function copyToClipboard() {
+    //navigator.clipboard.writeText(chatbox.textContent)
+    navigator.clipboard.writeText(chatbox.innerText)
 }
 
 function clearSystemPrompt() {

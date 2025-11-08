@@ -20,7 +20,8 @@
 #resetHistory { position: absolute; top: 5px; left: 30px; }
 #disableHistory { display: none; position: absolute; top: 5px; left: 70px; }
 #enableHistory { display: none; position: absolute; top: 5px; left: 70px; }
-#clearChat { position: absolute; top: 5px; left: 120px; }
+#copyToClipboard { position: absolute; top: 5px; left: 130px; }
+#clearChat { position: absolute; top: 5px; left: 170px; }
 #about { position: absolute; top: 5px; left: 250px; }
 #aboutWindowContent { background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
 #chatbox { height: 800px; overflow-y: scroll; border: 2px solid black; min-height: 70vh; resize: both; }

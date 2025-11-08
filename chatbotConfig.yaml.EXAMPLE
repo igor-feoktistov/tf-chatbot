@@ -6,7 +6,13 @@ chatOptions:
   chatHistory: true
 mcpServers:
   - name: kubectl-aws-us-east-1
-    integrationFqn: example:hosted-mcp-server:example-group:mcp-server:kubectl-aws-us-east-1
+    integrationFqn: example:mcp-server-group:example-group:mcp-server:kubectl-aws-us-east-1
+    enable_all_tools: false
+    tools:
+      - name: bash
+      - name: kubectl
+  - name: kubectl-aws-us-west-2
+    integrationFqn: example:mcp-server-group:example-group:mcp-server:kubectl-aws-us-west-2
     enable_all_tools: false
     tools:
       - name: bash

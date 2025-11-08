@@ -16,6 +16,7 @@
       <div id="resetHistory" data-tooltip="Reset request history"><img src="/static/icons/reset.png" type="button" onClick="resetHistory()" class="controlImage"></div>
       <div  id="disableHistory" data-tooltip="Disable request history"><img src="/static/icons/toggle_on.png" type="button" onClick="disableHistory()" class="controlImage"></div>
       <div class="controlImage" id="enableHistory" data-tooltip="Enable request history"><img src="/static/icons/toggle_off.png" type="button" onClick="enableHistory()" class="controlImage"></div>
+      <div class="controlImage" id="copyToClipboard" data-tooltip="Copy chat window content to clipboard"><img src="/static/icons/clipboard_white.png" type="button" onClick="copyToClipboard()" class="controlImage"></div>
       <div class="controlImage" id="clearChat" data-tooltip="Remove all the mesages from the chat window"><img src="/static/icons/clear_white.png" type="button" onClick="clearChat()" class="controlImage"></div>
       <div class="controlImage" id="about" data-tooltip="About"><img src="/static/icons/about.png" type="button" onClick="openAbout()" class="controlImage"></div>
       <div id="aboutWindow" class="about-window">
@@ -28,7 +29,8 @@
               <li>MCP servers:
                 <ul>
                   {{range .config.McpServers}}
-                  <li>{{.Name}}</li>
+                  <li>name: {{.Name}}</li>
+                  <li>integration FQDN: {{.IntegrationFqn}}</li>
                   <li>tools:
                     <ul>
                     {{range .Tools}}
@@ -59,6 +61,7 @@
     <img data-tooltip="Cancel LLM request" src="/static/icons/cancel.png" type="button" onClick="cancelUserPrompt()" class="controlImage">
     <div id="connect"><img src="/static/icons/connect.gif">&nbsp;Connecting...</div>
   </div>
+  <div id="userName" hidden>{{.userName}}</div>
   <script src="/static/javascript.js"></script>
 </body>
 </html>

@@ -16,6 +16,10 @@ tf-chatbot --help
 ```yaml
 # TF agent API endpoint
 baseUrl: https://cp.tf.example.com/api/llm/agent
+# TF personal access key (optional).
+# Alternatively, can be provided via environment variable TF_API_KEY.
+# It is used when BearerToken is missing in cookies.
+apiKey: eyFhbGdi<reducted>
 # HTTP session key
 sessionKey: session_example
 # LLM model path in TF

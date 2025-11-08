@@ -13,6 +13,8 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gorilla/websocket"
 	"github.com/openai/openai-go/v3"
+
+	"tf-chatbot/internal/utils"
 )
 
 const (
@@ -43,7 +45,10 @@ var upgrader = websocket.Upgrader{
 
 func handleIndex(c *gin.Context) {
 	var chatBot *ChatBot
+	var bearerToken, userLogin, userName, userEmail string
+	var err error
 	logger := log.New(gin.DefaultWriter, "[CHATBOT] ", log.LstdFlags)
+	session := sessions.Default(c)
 	if val, exists := c.Get("chatBot"); exists {
 		chatBot = val.(*ChatBot)
 	} else {
@@ -51,8 +56,7 @@ func handleIndex(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve ChatBot from context"})
 		return
 	}
-	bearerToken, err := c.Cookie("BearerToken")
-	if err == nil {
+	if bearerToken, err = c.Cookie("BearerToken"); err == nil {
 		chatBot.config.ApiKey = bearerToken
 	} else {
 		logger.Printf("WARNING: BearerToken is not found in cookies content")
@@ -62,7 +66,27 @@ func handleIndex(c *gin.Context) {
 			return
 		}
 	}
+	if len(chatBot.config.TokenClaims.UserLogin) > 0 {
+		if userLogin, err = utils.GetTokenClaim(chatBot.config.ApiKey, chatBot.config.TokenClaims.UserLogin); err == nil {
+			session.Set("userLogin", userLogin)
+		}
+	}
+	if len(chatBot.config.TokenClaims.UserName) > 0 {
+		if userName, err = utils.GetTokenClaim(chatBot.config.ApiKey, chatBot.config.TokenClaims.UserName); err == nil {
+			session.Set("userName", userName)
+		}
+	}
+	if len(chatBot.config.TokenClaims.UserEmail) > 0 {
+		if userEmail, err = utils.GetTokenClaim(chatBot.config.ApiKey, chatBot.config.TokenClaims.UserEmail); err == nil {
+			session.Set("userEmail", userEmail)
+		}
+	}
+	session.Save()
+	if len(userName) == 0 && len(userLogin) > 0 {
+		userName = userLogin
+	}
 	c.HTML(http.StatusOK, "index.html", gin.H{
+		"userName": userName,
 		"version": chatBot.version,
 		"config": chatBot.config,
 	})
@@ -88,6 +112,7 @@ func keepalive(conn *websocket.Conn) {
 func handleWebSocket(c *gin.Context) {
 	var chatBot *ChatBot
 	logger := log.New(gin.DefaultWriter, "[CHATBOT] ", log.LstdFlags)
+	session := sessions.Default(c)
 	if val, exists := c.Get("chatBot"); exists {
 		chatBot = val.(*ChatBot)
 	} else {
@@ -101,18 +126,18 @@ func handleWebSocket(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upgrade connection to websocket: " + err.Error()})
 		return
 	}
+	defer conn.Close()
 	go keepalive(conn)
-	bearerToken, err := c.Cookie("BearerToken")
-	if err == nil {
+	if bearerToken, err := c.Cookie("BearerToken"); err == nil {
 		chatBot.config.ApiKey = bearerToken
 	} else {
 		logger.Printf("WARNING: BearerToken is not found in cookies content")
 		if len(chatBot.config.ApiKey) == 0 {
-			logger.Printf("ERROR: ApiKey is not defined")
+			logger.Printf("ERROR: ApiKey is not defined in configuration")
 			conn.WriteMessage(websocket.TextMessage, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>BearerToken is not found in cookies content</p>`))
+			return
 		}
 	}
-	defer conn.Close()
 	resetHistory := true
 	var responseChan chan string
 	var cancel context.CancelFunc
@@ -139,7 +164,6 @@ func handleWebSocket(c *gin.Context) {
 				conn.WriteMessage(messageType, []byte(EventDiagnostic + `:<p style="color: red;"><strong>Websocket error: </strong>` + fmt.Sprintf("received unrecognized websocket message: \"%s\"", string(message)) + `</p>`))
 				return
 			}
-			session := sessions.Default(c)
 			switch subMatch[1] {
 			case EventPing:
 				logger.Printf("INFO: received EventPing")

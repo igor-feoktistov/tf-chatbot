@@ -5,6 +5,7 @@ import (
 	"time"
 	"log"
 	"context"
+	"os"
 	"io/ioutil"
 	"strings"
 	"encoding/json"
@@ -22,31 +23,38 @@ import (
 )
 
 const (
-        VERSION = "1.0.15"
+        VERSION = "1.0.16"
 	LLM_STREAM_TIMEOUT = 300
 )
 
 type mcpServer struct {
-	Name           string `yaml:"name"           json:"name"`
-	IntegrationFqn string `yaml:"integrationFqn" json:"integration_fqn"`
-	EnableAllTools bool   `yaml:"enableAllTools" json:"enable_all_tools"`
+	Name           string `yaml:"name"            json:"name"`
+	IntegrationFqn string `yaml:"integrationFqdn" json:"integration_fqn"`
+	EnableAllTools bool   `yaml:"enableAllTools"  json:"enable_all_tools"`
 	Tools []struct {
-		Name string   `yaml:"name"           json:"name"`
-	}                     `yaml:"tools"          json:"tools"`
+		Name string   `yaml:"name"            json:"name"`
+	}                     `yaml:"tools"           json:"tools,omitempty"`
 }
 
 type chatOptions struct {
 	ChatHistory bool `yaml:"chatHistory" json:"chatHistory"`
 }
 
+type tokenClaims struct {
+	UserName  string `yaml:"userName"  json:"userName,omitempty"`
+	UserLogin string `yaml:"userLogin" json:"userLogin,omitempty"`
+	UserEmail string `yaml:"userEmail" json:"userEmail,omitempty"`
+}
+
 type chatBotConfig struct {
-	BaseUrl      string      `yaml:"baseUrl"      json:"baseUrl"`
-	SessionKey   string      `yaml:"sessionKey"   json:"sessionKey"`
-	ApiKey       string      `yaml:"apiKey"       json:"apiKey,omitempty"`
-	SystemPrompt string      `yaml:"systemPrompt" json:"systemPrompt"`
-	Model        string      `yaml:"model"        json:"model"`
-	ChatOptions  chatOptions `yaml:"chatOptions"  json:"chatOptions,omitempty"`
-	McpServers   []mcpServer `yaml:"mcpServers"   json:"mcpServers,omitempty"`
+	BaseUrl        string      `yaml:"baseUrl"      json:"baseUrl"`
+	SessionKey     string      `yaml:"sessionKey"   json:"sessionKey"`
+	ApiKey         string      `yaml:"apiKey"       json:"apiKey,omitempty"`
+	TokenClaims    tokenClaims `yaml:"tokenClaims"  json:"tokenClaims,omitempty"`
+	SystemPrompt   string      `yaml:"systemPrompt" json:"systemPrompt"`
+	Model          string      `yaml:"model"        json:"model"`
+	ChatOptions    chatOptions `yaml:"chatOptions"  json:"chatOptions,omitempty"`
+	McpServers     []mcpServer `yaml:"mcpServers"   json:"mcpServers,omitempty"`
 }
 
 type Content struct {
@@ -81,6 +89,9 @@ func ChatBotInitialize(configPath string, staticPath string) (chatBot *ChatBot, 
 			return
 		}
 		config.SystemPrompt = string(b)
+	}
+	if len(config.ApiKey) == 0 {
+		config.ApiKey = os.Getenv("TF_API_KEY")
 	}
 	chatBot = &ChatBot{
 		version: VERSION,
