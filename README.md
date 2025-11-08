@@ -22,6 +22,11 @@ baseUrl: https://cp.tf.example.com/api/llm/agent
 apiKey: eyFhbGdi<reducted>
 # HTTP session key
 sessionKey: session_example
+# Bearer token claims mapping used in chat greetings (optional)
+tokenClaims:
+  userName: name
+  userLogin: upn
+  userEmail: email
 # LLM model path in TF
 model: prod/us-anthropic-claude-sonnet-4-20250514-v1-0
 # base64 encoded default system prompt
@@ -34,7 +39,7 @@ mcpServers:
     # MCP server name (mostly for better report in "about" window)
   - name: kubectl-aws-us-east-1
     # MCP server TF integration path
-    integrationFqn: example:hosted-mcp-server:example-group:mcp-server:kubectl-aws-us-east-1
+    integrationFqn: example:mcp-server-group:example-group:mcp-server:kubectl-aws-us-east-1
     enable_all_tools: false
     # list of tools to expose
     tools:
