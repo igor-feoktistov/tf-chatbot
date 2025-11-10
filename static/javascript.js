@@ -22,7 +22,6 @@ const connect = document.getElementById("connect");
 const aboutWindow = document.getElementById("aboutWindow");
 
 var ws = null;
-var vs_protocol = "ws";
 
 if (userName.textContent === "") {
     chatbox.innerHTML = "<h3>Assistant</h3></div>Hello! How can I help you today?";
@@ -231,9 +230,20 @@ function clearChat() {
     chatbox.scrollTop = chatbox.scrollHeight;
 }
 
+async function copyFormattedText() {
+    const clipboardItem = new ClipboardItem({
+        'text/html': new Blob([chatbox.innerHTML], {type: 'text/html'}),
+        'text/plain': new Blob([chatbox.innerText], {type: 'text/plain'})
+    });
+    try {
+        await navigator.clipboard.write([clipboardItem]);
+    } catch (err) {
+        console.error('Failed to copy formatted text:', err);
+    }
+}
+
 function copyToClipboard() {
-    //navigator.clipboard.writeText(chatbox.textContent)
-    navigator.clipboard.writeText(chatbox.innerText)
+    copyFormattedText();
 }
 
 function clearSystemPrompt() {

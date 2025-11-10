@@ -23,7 +23,7 @@
         <div id="aboutWindowContent">
           <img src="/static/icons/robot.png">
           <p>Version: {{.version}}</p>
-          <p>Configuration
+          <p>Configuration:
             <ul>
               <li>model: {{.config.Model}}</li>
               <li>MCP servers:

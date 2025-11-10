@@ -23,7 +23,7 @@ import (
 )
 
 const (
-        VERSION = "1.0.16"
+        VERSION = "1.0.17"
 	LLM_STREAM_TIMEOUT = 300
 )
 
